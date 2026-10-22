@@ -1,0 +1,16 @@
+// FAKE test fixture (JSONC with comments and trailing commas)
+{
+  "inputs": [{ "type": "promptString", "id": "tok", "password": true }],
+  "servers": {
+    "aws": {
+      "type": "stdio",
+      "command": "aws-mcp",
+      "env": {
+        "AWS_ACCESS_KEY_ID": "AKIAFAKEFAKEFAKE1234",
+        "AWS_SECRET_ACCESS_KEY": "FAKEsecretQ9w8e7r6t5y4u3i2o1pFAKEsecret0",
+        "AWS_REGION": "eu-central-1",
+      },
+    },
+    "gh-input": { "command": "x", "env": { "GITHUB_TOKEN": "${input:tok}" } },
+  },
+}

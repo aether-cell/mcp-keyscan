@@ -1,0 +1,1 @@
+{ "mcpServers": { "brave": { "command": "npx", "args": ["brave-mcp"], "env": { "BRAVE_API_KEY": "BSAFAKEfake12345FAKEfake678" } } } }

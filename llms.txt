@@ -1,0 +1,21 @@
+# mcp-keyscan
+
+> mcp-keyscan is a stdlib-only Python 3.10+ CLI that finds plaintext secrets (API keys, tokens, passwords) in AI-agent and MCP client config files (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf/Devin Desktop, Zed, Continue, Cline, Roo Code, Gemini CLI, Codex, .env). It never prints secret values: only the first 4 characters and the length. Exit code 1 when findings exist, so it works as a CI gate. Apache-2.0.
+
+## CLI commands
+- `mcp-keyscan scan`: scan known per-user client config locations plus project files in the current directory
+- `mcp-keyscan scan PATH [PATH...] [--global]`: recursively scan directories or files (optionally plus user configs)
+- `mcp-keyscan scan --json`: JSON with file, client, server, key, provider, severity, rule, redacted preview, line
+- `mcp-keyscan scan --min-severity {low,medium,high}`: filter findings and the exit code
+- `mcp-keyscan fix --dry-run [--json]`: per finding, the env-var reference to use (`${env:VAR}` / `${VAR}`) and the matching `mintcall add-credential` command; never writes files
+
+## Exit codes
+- 0: no findings; 1: findings at or above --min-severity; 2: usage error (e.g. `fix` without `--dry-run`)
+
+## Docs
+- [README](https://github.com/aether-cell/mcp-keyscan/blob/main/README.md)
+- [Agent guide](https://github.com/aether-cell/mcp-keyscan/blob/main/AGENTS.md)
+- [mintcall, local per-call credential broker](https://github.com/aether-cell/mintcall)
+
+## Optional
+- [License (Apache-2.0)](https://github.com/aether-cell/mcp-keyscan/blob/main/LICENSE)

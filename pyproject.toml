@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-keyscan"
+version = "0.1.0"
+description = "Find plaintext secrets in AI-agent / MCP client config files (Claude, Cursor, VS Code, Windsurf, Zed, Continue, Cline) without ever printing them."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "aether-cell contributors" }]
+keywords = ["mcp", "secrets", "security", "ai-agents", "claude", "cursor", "credentials", "scanner"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Environment :: Console",
+  "Topic :: Security",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/aether-cell/mcp-keyscan"
+"Credential broker (mintcall)" = "https://github.com/aether-cell/mintcall"
+
+[project.scripts]
+mcp-keyscan = "mcp_keyscan.cli:main"
+
+[tool.setuptools]
+packages = ["mcp_keyscan"]

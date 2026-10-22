@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/srv/data"] },
+    "gh": { "command": "gh-mcp", "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}", "GH_HOST": "github.com" } },
+    "remote": { "url": "https://mcp.invalid/mcp", "headers": { "Authorization": "Bearer ${env:REMOTE_TOKEN}" } },
+    "ids": { "command": "x", "env": { "PROJECT_ID": "3f2b8c1e-9a7d-4e6f-b5c4-1d2e3f4a5b6c", "MODEL": "claude-sonnet-4-5" } }
+  }
+}

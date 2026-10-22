@@ -1,0 +1,13 @@
+# FAKE test fixture
+name: Notion block
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: notion
+    command: npx
+    args:
+      - "-y"
+      - "@notionhq/notion-mcp-server"
+    env:
+      NOTION_TOKEN: "ntn_FAKE1a2b3c4d5e6f7g8h9i0jFAKE"
+      LOG_LEVEL: debug

@@ -1,0 +1,9 @@
+{
+  // FAKE fixture: legacy VS Code settings with an "mcp" key
+  "editor.fontSize": 13,
+  "mcp": {
+    "servers": {
+      "slack": { "command": "slack-mcp", "env": { "SLACK_BOT_TOKEN": "xoxb-FAKE000000-FAKE000000-fakeFAKEfake" } }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "stripe": {
+      "command": "npx",
+      "args": ["-y", "@stripe/mcp", "--api-key=sk_live_FAKE0fake1FAKE2fake3"]
+    },
+    "hf": {
+      "type": "http",
+      "url": "https://hf.invalid/mcp?token=hf_FAKE0fakeFAKE1fakeFAKE2fakeFAKE3fa",
+      "headers": { "X-Custom-Token": "FAKEq8Zr2LmX9vT4pK7wN3sB6yH1" }
+    },
+    "gemini": { "command": "gem", "env": { "GEMINI_API_KEY": "AIzaFAKEfakeFAKEfakeFAKEfakeFAKEfake123" } },
+    "db": { "command": "pg-mcp", "args": ["postgres://admin:FAKEpassw0rd99@db.invalid:5432/app"] },
+    "ref-only": { "command": "x", "env": { "TOKEN": "$TOKEN", "API_KEY": "op://vault/item/field" } }
+  }
+}
