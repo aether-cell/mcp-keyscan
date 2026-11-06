@@ -1,6 +1,6 @@
 # mcp-keyscan
 
-**Never prints a secret value.** Every key it finds is shown only as a redacted preview (first 4 characters + length), in the terminal, in the JSON and in the shareable report. A test in this repo fails the build if any fixture secret appears in stdout, stderr, the report file or the JSON.
+**Never prints a secret value.** Every key it finds is shown only as a redacted preview (first 4 characters + length), in the terminal, in the JSON and in the shareable report. A test in this repo (`npm test`) fails if any fixture secret appears in stdout, stderr, the report file or the JSON.
 
 `mcp-keyscan` finds plaintext API keys in your AI-agent and MCP client configs, **agent logs and transcripts, and shell history**, then gives you a redacted report you can paste into an issue, a chat or a post, with a one-line fix per finding.
 
