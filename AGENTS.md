@@ -3,7 +3,8 @@
 Guidance for AI coding agents using or changing this repo.
 
 ## Using the tool
-- Run `npx --yes github:aether-cell/mcp-keyscan --json` and read `findings[]`.
+- Run `npx --yes github:aether-cell/mcp-keyscan --json` and read `findings[]`, or add it as an MCP server
+  (`npx -y github:aether-cell/mcp-keyscan --mcp`) and call the `scan_secrets` tool.
 - Each finding has `severity` (`high`/`medium`), `kind` (`config`/`log`/`history`), `client`, `file` (home shown as `~`),
   `line`, `server`, `key` (field inside the server entry), `provider`, `rule`, `preview` (redacted) and a one-line `fix`.
 - Exit code 1 means findings; that is the expected result on a dirty machine, not a crash.
@@ -17,6 +18,7 @@ Guidance for AI coding agents using or changing this repo.
 - `src/detect.js`: gitleaks matching, the single key-name heuristic, placeholder filter, entropy, `redact()`.
 - `src/locations.js`: per-client, per-platform config / log / history paths and directory walkers.
 - `src/scan.js`: reads files, maps findings to MCP servers and fields, builds the fix line.
+- `src/mcp.js`: stdio MCP server (`--mcp`), one read-only tool `scan_secrets` returning the redacted report.
 - `src/report.js`: the only place output is built, from an allow-list of fields (value only as `redact(value)`).
 - `test/`: `node --test`; fixtures under `test/fixtures` contain fake keys only.
 

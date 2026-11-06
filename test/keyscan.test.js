@@ -161,3 +161,28 @@ test('no network or telemetry code in the runtime', () => {
   assert.ok(!pkg.dependencies || Object.keys(pkg.dependencies).length === 0, 'zero runtime dependencies');
   assert.ok(pkg.bin && pkg.bin['mcp-keyscan'], 'bin entry');
 });
+
+test('--mcp: MCP server lists scan_secrets and returns only the redacted report', () => {
+  const msgs = [
+    { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0' } } },
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+    { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'scan_secrets', arguments: {} } },
+    { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'scan_secrets', arguments: { format: 'json' } } },
+    { jsonrpc: '2.0', id: 5, method: 'nope' },
+  ];
+  const env = { PATH: process.env.PATH, HOME, USERPROFILE: HOME };
+  const r = spawnSync(process.execPath, [BIN, '--mcp'], { cwd: PROJECT, env, encoding: 'utf8', input: msgs.map((m) => JSON.stringify(m)).join('\n') + '\n' });
+  const out = r.stdout.trim().split('\n').map((l) => JSON.parse(l));
+  const byId = Object.fromEntries(out.map((m) => [m.id, m]));
+  assert.strictEqual(byId[1].result.protocolVersion, '2025-06-18');
+  assert.strictEqual(byId[1].result.serverInfo.name, 'mcp-keyscan');
+  assert.deepStrictEqual(byId[2].result.tools.map((t) => t.name), ['scan_secrets']);
+  const text = byId[3].result.content[0].text;
+  assert.strictEqual(text.trimEnd().split('\n').pop(), 'scanned with npx mcp-keyscan');
+  assert.match(text, /sk-a…\(43 chars\)/);
+  assert.ok(JSON.parse(byId[4].result.content[0].text).findings.length > 0);
+  assert.strictEqual(byId[5].error.code, -32601);
+  assertNoLeak(r.stdout, 'mcp stdout');
+  assertNoLeak(r.stderr, 'mcp stderr');
+});

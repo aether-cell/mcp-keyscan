@@ -28,6 +28,7 @@ Options:
   --no-history          skip shell history
   --global              with PATH: also scan the per-user locations
   --list-locations      print the per-user paths that would be checked, then exit
+  --mcp                 run as an MCP server over stdio (tool: scan_secrets, output redacted)
   -v, --version         print version
   -h, --help            show this help
 
@@ -51,6 +52,7 @@ function parse(argv) {
     else if (a === '--no-history') o.history = false;
     else if (a === '--global') o.global = true;
     else if (a === '--list-locations') o.list = true;
+    else if (a === '--mcp') o.mcp = true;
     else if (a.startsWith('-')) throw new Error(`unknown option ${a}`);
     else o.paths.push(a);
   }
@@ -66,6 +68,7 @@ function main() {
   }
   if (o.help) { process.stdout.write(HELP + '\n'); return 0; }
   if (o.version) { process.stdout.write(version + '\n'); return 0; }
+  if (o.mcp) { require('../src/mcp').serve({ version }); return undefined; }
   if (o.list) {
     for (const l of globalLocations()) process.stdout.write(`${l.kind.padEnd(8)} ${l.client.padEnd(26)} ${l.path}${fs.existsSync(l.path) ? '  (present)' : ''}\n`);
     return 0;
@@ -85,4 +88,5 @@ function main() {
   return result.findings.length ? 1 : 0;
 }
 
-process.exitCode = main();
+const code = main();
+if (code !== undefined) process.exitCode = code;

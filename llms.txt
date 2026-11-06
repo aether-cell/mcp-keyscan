@@ -8,6 +8,7 @@
 - `--json`: redacted JSON (file, line, client, server, key, provider, severity, rule, preview, fix)
 - `--out FILE`: write the shareable report
 - `--min-severity {low,medium,high}`, `--no-logs`, `--no-history`, `--list-locations`
+- `--mcp`: stdio MCP server with one read-only tool `scan_secrets` (args: paths, include_logs, include_history, min_severity, format); output is redacted
 
 ## Exit codes
 - 0: no findings; 1: findings at or above --min-severity; 2: usage error

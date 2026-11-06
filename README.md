@@ -26,6 +26,7 @@ npx github:aether-cell/mcp-keyscan --json                 # machine-readable, st
 npx github:aether-cell/mcp-keyscan --min-severity high    # only provider-specific hits
 npx github:aether-cell/mcp-keyscan --no-logs --no-history # configs only
 npx github:aether-cell/mcp-keyscan --list-locations       # which paths it checks on this machine
+npx github:aether-cell/mcp-keyscan --mcp                  # stdio MCP server, tool: scan_secrets
 ```
 
 Exit code: `0` = clean, `1` = findings (at or above `--min-severity`), `2` = usage error. Works as a CI gate:
@@ -33,6 +34,20 @@ Exit code: `0` = clean, `1` = findings (at or above `--min-severity`), `2` = usa
 ```yaml
 - run: npx --yes github:aether-cell/mcp-keyscan . --min-severity medium
 ```
+
+## Use it from an agent (MCP server)
+
+`--mcp` runs mcp-keyscan as a stdio MCP server with one read-only tool, `scan_secrets`, so an agent can check its own machine. The tool returns the same redacted report (or redacted JSON), so the agent never sees a value either.
+
+```json
+{
+  "mcpServers": {
+    "keyscan": { "command": "npx", "args": ["-y", "github:aether-cell/mcp-keyscan", "--mcp"] }
+  }
+}
+```
+
+Tool arguments (all optional): `paths`, `include_logs`, `include_history`, `min_severity`, `format` (`text` | `json`).
 
 ## Sample report
 
