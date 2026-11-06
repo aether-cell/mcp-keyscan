@@ -2,3 +2,7 @@ mcp-keyscan
 Copyright 2026 aether-cell contributors
 
 Licensed under the Apache License, Version 2.0.
+
+This product includes the default rule set of gitleaks (rules/gitleaks.toml, rules/gitleaks.json),
+https://github.com/gitleaks/gitleaks, Copyright (c) 2019 Zachary Rice, licensed under the MIT License
+(see rules/LICENSE-gitleaks).

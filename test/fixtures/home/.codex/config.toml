@@ -1,0 +1,9 @@
+# FAKE test fixture
+model = "gpt-5"
+
+[mcp_servers.tavily]
+command = "npx"
+args = ["-y", "tavily-mcp"]
+
+[mcp_servers.tavily.env]
+TAVILY_API_KEY = "tvly-FAKEcodex1234FAKEcodex5678"

@@ -3,26 +3,27 @@
 Guidance for AI coding agents using or changing this repo.
 
 ## Using the tool
-- Run `mcp-keyscan scan --json` (or `python -m mcp_keyscan scan --json`) and read `findings[]`.
-- Each finding has `file`, `client`, `server`, `key` (location inside the server entry), `provider`,
-  `severity` (`high`/`medium`/`low`), `rule`, `preview` (redacted) and `line`.
-- Exit code 1 means findings; that is the expected result on a dirty config, not a crash.
-- `mcp-keyscan fix --dry-run --json` gives `replace_with`, `env_var`, `note` and a `mintcall` command per finding.
-- Never try to recover or print the real value. If a fix needs the value, ask the user to move it themselves
-  (environment variable, OS keychain, or a broker such as mintcall: https://github.com/aether-cell/mintcall),
-  and to rotate the key.
+- Run `npx --yes github:aether-cell/mcp-keyscan --json` and read `findings[]`.
+- Each finding has `severity` (`high`/`medium`), `kind` (`config`/`log`/`history`), `client`, `file` (home shown as `~`),
+  `line`, `server`, `key` (field inside the server entry), `provider`, `rule`, `preview` (redacted) and a one-line `fix`.
+- Exit code 1 means findings; that is the expected result on a dirty machine, not a crash.
+- Never try to recover or print the real value. Ask the user to move it out of the file (environment variable,
+  OS keychain or a credential broker) and to rotate the key.
+- The plain-text report (default output, or `--out FILE`) is redacted and safe to share. It ends with `scanned with npx mcp-keyscan`.
 
 ## Layout
-- `mcp_keyscan/detect.py`: provider regexes, placeholder filter, entropy, `redact()`. Pure functions.
-- `mcp_keyscan/locations.py`: per-client, per-platform config paths and the directory walker.
-- `mcp_keyscan/scanner.py`: JSON/JSONC/TOML parsing, server-entry walking, line-based fallback for YAML and .env.
-- `mcp_keyscan/cli.py`: argparse CLI, table/JSON output, `fix --dry-run` plan.
-- `tests/`: unittest suite; fixtures under `tests/fixtures` contain FAKE keys only.
+- `bin/mcp-keyscan.js`: CLI (argument parsing, output).
+- `src/rules.js`: loads vendored gitleaks rules (`rules/gitleaks.json`) and adapts RE2 syntax to JS.
+- `src/detect.js`: gitleaks matching, the single key-name heuristic, placeholder filter, entropy, `redact()`.
+- `src/locations.js`: per-client, per-platform config / log / history paths and directory walkers.
+- `src/scan.js`: reads files, maps findings to MCP servers and fields, builds the fix line.
+- `src/report.js`: the only place output is built, from an allow-list of fields (value only as `redact(value)`).
+- `test/`: `node --test`; fixtures under `test/fixtures` contain fake keys only.
 
 ## Rules for changes
-- Standard library only; keep Python 3.10 compatible.
-- No output path may contain a secret value. Everything user-visible goes through `detect.redact()`;
-  `tests/test_keyscan.py` asserts that no fixture secret (or more than its first 4 chars) is ever printed.
-- New fixture keys must be fake and contain `FAKE`.
-- Run `python -m unittest discover -s tests` before committing.
-- v0 has no write mode; `fix` must stay read-only.
+- Zero runtime dependencies. No network modules, no telemetry (a test checks this).
+- No output path may contain a secret value. `test/keyscan.test.js` fails if any fixture secret,
+  or any 6-character piece of one, appears in stdout, stderr, the report file or JSON.
+- Detection comes from gitleaks. Do not add provider regexes; update `rules/` with `scripts/vendor-gitleaks.py`.
+- New fixture keys must be fake. Add them to `SECRETS` in the test.
+- Run `npm test` before committing. mcp-keyscan never writes to scanned files.

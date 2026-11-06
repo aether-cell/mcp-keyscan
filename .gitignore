@@ -1,6 +1,4 @@
-__pycache__/
-*.pyc
-*.egg-info/
-build/
-dist/
-.venv/
+node_modules/
+*.log
+keyscan*.md
+.DS_Store
