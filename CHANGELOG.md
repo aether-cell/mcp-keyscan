@@ -5,6 +5,7 @@
 ### Fixed
 - In JSON configs, scan each unescaped string value as well as the raw line. A key inside a JSON-escaped header (for example `\"x-api-key: …\"` or `\"Authorization: Bearer …\"` in a Claude Code `permissions.allow` entry) is now reported as a high-severity provider finding at `permissions.allow[0]`, instead of a medium `sensitive-key-name` hit whose value includes a trailing backslash and cannot be located.
 - Accept `)` as a terminator for Anthropic API keys (`anthropic-api-key` and `anthropic-admin-api-key` only) so a bare `sk-ant-…` at the end of a `Bash(...)` allow rule is detected. This is a wrapper in our code; `rules/gitleaks.json` is unchanged, and no other rule is broadened.
+- Detect passwords in database connection-string URLs (`postgres`/`postgresql`, `mysql`, `mariadb`, `mongodb`/`mongodb+srv`, `redis`/`rediss`, `amqp`/`amqps`, `mssql`/`sqlserver`) as high-severity `connection-string-password`. Obvious placeholders (`password`, `pass`, `changeme`, `${VAR}`, `$VAR`, `<...>`, `***`, `xxx`, empty) are ignored. Other URL credentials stay medium `url-credentials`.
 
 ### Changed
 - Findings in Claude Code settings `permissions.*` sections now advise rotating the key and removing that allow/deny/ask entry, not replacing the value with an MCP env-var reference. The entry is the saved command; substituting `${VAR}` there is the wrong fix.

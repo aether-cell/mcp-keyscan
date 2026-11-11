@@ -94,18 +94,18 @@ function fixFor(f) {
   if (f.kind === 'log') {
     return `rotate this ${prov}key, then delete or scrub ${f.display}; the agent wrote it to disk in clear`;
   }
-  if (f.rule === 'url-credentials') {
-    const name = `${String(f.server || 'SERVICE').toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_PASSWORD`;
-    return `rotate this password, then take it out of the URL and pass it as \${${name}} (or the client's password env var)`;
-  }
-  if (f.client === 'dotenv') {
-    return `rotate this ${prov}key if this file was ever committed, synced or shared; keep it in .gitignore and out of agent context`;
-  }
   if (f.section === 'permissions' && /Claude Code/.test(f.client || '')) {
     const bucket = typeof f.key === 'string' && /^permissions\.[A-Za-z0-9_]+/.test(f.key)
       ? f.key.replace(/\[\d+\]$/, '')
       : 'permissions.allow';
     return `rotate this ${prov}key, then remove the entry from ${bucket}`;
+  }
+  if (f.rule === 'url-credentials' || f.rule === 'connection-string-password') {
+    const name = `${String(f.server || 'SERVICE').toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_PASSWORD`;
+    return `rotate this password, then take it out of the URL and pass it as \${${name}} (or the client's password env var)`;
+  }
+  if (f.client === 'dotenv') {
+    return `rotate this ${prov}key if this file was ever committed, synced or shared; keep it in .gitignore and out of agent context`;
   }
   const name = envName(f);
   const ref = /Claude Code|portable/.test(f.client) ? `\${${name}}` : /Cursor|VS Code/.test(f.client) ? `\${env:${name}}` : `\${${name}}`;

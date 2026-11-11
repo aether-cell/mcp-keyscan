@@ -10,6 +10,18 @@ npx github:aether-cell/mcp-keyscan
 
 Local only: no network calls, no telemetry, zero dependencies. Node 18+. Apache-2.0.
 
+## Did Claude Code save your key in settings.local.json?
+
+Claude Code's "Yes, and don't ask again" option can write the exact approved command — API key included — into `.claude/settings.json` or `.claude/settings.local.json`. [The Hacker News](https://thehackernews.com/2026/11/claude-codes-dont-ask-again-file.html), citing Apiiro, reports 1,122 public copies of `settings.local.json` holding at least one secret (1,379 secrets total) out of 104,185 copies.
+
+Check your machine (the report is redacted and never prints the value):
+
+```bash
+npx github:aether-cell/mcp-keyscan
+```
+
+mcp-keyscan flags API keys and tokens in `permissions.allow`, and also flags database passwords in connection strings like `psql postgres://user:pass@host`. If a key is in a `permissions.allow` entry, rotate it, then remove that entry, then add `.claude/settings.local.json` to the repo's `.gitignore`; if it was ever committed, the key is in git history, so rotate first. mcp-keyscan does not edit the file.
+
 ## Why
 
 - Setup guides tell you to paste keys straight into `env`, `headers` or `args`. Those files get synced, shared, committed, and read by agents.
@@ -103,7 +115,7 @@ Per-user locations (Linux `~/.config`, macOS `~/Library/Application Support`, Wi
 ## What it detects
 
 - **The [gitleaks](https://github.com/gitleaks/gitleaks) rule set**, vendored unchanged in `rules/gitleaks.json` (221 rules, MIT, see `rules/LICENSE-gitleaks`): provider keys (Anthropic, OpenAI, GitHub, AWS, Stripe, Slack, Hugging Face, GCP, …), private keys, JWTs, `curl -H "Authorization: …"` and gitleaks' generic API-key rule, with gitleaks' keywords, entropy thresholds and allowlists. No home-grown regex farm.
-- **One key-name heuristic** on top, because agent configs are mostly `NAME=value`: a sensitive name (`*_API_KEY`, `*TOKEN*`, `*SECRET*`, `PASSWORD`, `--api-key VALUE`, `?token=`) with a secret-looking value (letters + digits, ≥ 12 chars, entropy ≥ 3), plus credentials in URLs (`postgres://user:pass@`). These are reported as `medium`.
+- **One key-name heuristic** on top, because agent configs are mostly `NAME=value`: a sensitive name (`*_API_KEY`, `*TOKEN*`, `*SECRET*`, `PASSWORD`, `--api-key VALUE`, `?token=`) with a secret-looking value (letters + digits, ≥ 12 chars, entropy ≥ 3), plus generic credentials in URLs (`https://user:pass@`). These are reported as `medium`. Passwords in database connection strings (`postgres://`, `mysql://`, `mongodb://`, `redis://`, and similar) are reported as `high` (`connection-string-password`).
 - **Ignored:** `${VAR}`, `${env:VAR}`, `${input:id}`, `$VAR`, `%VAR%`, `{{…}}`, `<…>`, `op://…` and similar references, and placeholders (`your-api-key-here`, `xxxx`, `changeme`, `…EXAMPLE`).
 - In MCP JSON/JSONC configs each finding names the server and the field (`env.X`, `headers.Authorization`, `args[2]`); TOML findings name the `[mcp_servers.*]` table.
 
