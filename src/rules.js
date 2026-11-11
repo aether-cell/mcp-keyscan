@@ -36,6 +36,18 @@ function compile(re2, extra = '') {
   return new RegExp(source, Array.from(new Set((flags + extra).split(''))).join(''));
 }
 
+// Local override only: treat ')' as a terminator for Anthropic keys so a
+// key at the end of a Claude Code Bash(...) allow rule still matches.
+// The vendored rules/gitleaks.json file is not modified, and no other
+// rule is broadened.
+function applyAnthropicTerminatorOverride(rule) {
+  if (rule.id !== 'anthropic-api-key' && rule.id !== 'anthropic-admin-api-key') return;
+  const src = rule.regex.source;
+  const next = src.replace('[\\x60\'"\\s;]', '[\\x60\'"\\s;)]');
+  if (next === src) throw new Error(`anthropic terminator override failed for ${rule.id}: unexpected regex ${src}`);
+  rule.regex = new RegExp(next, rule.regex.flags);
+}
+
 let cached = null;
 
 function loadRules() {
@@ -45,7 +57,7 @@ function loadRules() {
   const skipped = [];
   for (const r of data.rules) {
     try {
-      rules.push({
+      const rule = {
         id: r.id,
         regex: compile(r.regex, 'g'),
         secretGroup: r.secretGroup || 0,
@@ -58,7 +70,9 @@ function loadRules() {
           stopwords: (a.stopwords || []).map((s) => s.toLowerCase()),
           condition: a.condition || 'OR',
         })),
-      });
+      };
+      applyAnthropicTerminatorOverride(rule);
+      rules.push(rule);
     } catch (e) {
       skipped.push(r.id);
     }

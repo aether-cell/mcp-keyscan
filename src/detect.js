@@ -45,6 +45,23 @@ function isPlaceholder(value) {
   return PLACEHOLDER.test(v);
 }
 
+function isConnPasswordPlaceholder(value) {
+  const v = String(value).trim().replace(/^["'`]|["'`]$/g, '');
+  if (!v || isPlaceholder(v)) return true;
+  if (/^\*+$/.test(v) || CONN_PASSWORD_PLACEHOLDER.test(v)) return true;
+  return false;
+}
+
+function connProvider(scheme) {
+  const s = String(scheme || '').toLowerCase();
+  if (s.startsWith('postgres')) return 'postgres';
+  if (s.startsWith('mongo')) return 'mongodb';
+  if (s.startsWith('redis')) return 'redis';
+  if (s.startsWith('amqp')) return 'amqp';
+  if (s === 'sqlserver') return 'mssql';
+  return s;
+}
+
 function allowed(allow, secret, match, line) {
   const s = secret.toLowerCase();
   if (allow.stopwords && allow.stopwords.some((w) => s.includes(w))) return true;
@@ -124,7 +141,9 @@ const SENSITIVE_QUICK = /api[_-]?key|apikey|token|secret|passw|credential|auth|p
 const ASSIGN = new RegExp(
   `(?:^|[\\s{,;"'?&])["']?(${SENSITIVE_NAME})["']?\\s*(?:=|:)\\s*["']?(?:Bearer\\s+|Basic\\s+|token\\s+)?([^\\s"',;}]{12,})`, 'gi');
 const FLAG = new RegExp(`--(${SENSITIVE_NAME})(?:=|["',\\s]+)["']?([^\\s"',\\]]{12,})`, 'gi');
-const URL_CRED = /[a-z][a-z0-9+.-]*:\/\/[^\s:@/"']+:([^\s@/"']{6,})@/gi;
+const URL_CRED = /([a-z][a-z0-9+.-]*):\/\/[^\s:@/"']*:([^\s@/"']+)@/gi;
+const CONN_SCHEME = /^(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|rediss?|amqps?|mssql|sqlserver)$/i;
+const CONN_PASSWORD_PLACEHOLDER = /^(?:password|pass|changeme|xxx+)$/i;
 const NON_SECRET_NAME = /(?:_id|_url|_uri|_path|_file|_dir|_name|_type|_host|_port|_region|_endpoint|_version|_env|_mode|_level|_count|_size|_ttl|_timeout|_expires?(?:_at)?|max_tokens?|_tokens?_limit|tokenizer)$/i;
 
 function looksSecret(v) {
@@ -153,8 +172,15 @@ function heuristicLine(line) {
   URL_CRED.lastIndex = 0;
   let m;
   while ((m = URL_CRED.exec(line)) !== null) {
-    if (isPlaceholder(m[1])) continue;
-    out.push({ rule: 'url-credentials', provider: 'url', severity: 'medium', value: m[1], source: 'heuristic' });
+    const scheme = m[1];
+    const secret = m[2];
+    if (CONN_SCHEME.test(scheme)) {
+      if (isConnPasswordPlaceholder(secret)) continue;
+      out.push({ rule: 'connection-string-password', provider: connProvider(scheme), severity: 'high', value: secret, source: 'heuristic' });
+      continue;
+    }
+    if (secret.length < 6 || isPlaceholder(secret)) continue;
+    out.push({ rule: 'url-credentials', provider: 'url', severity: 'medium', value: secret, source: 'heuristic' });
   }
   return out;
 }
