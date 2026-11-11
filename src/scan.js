@@ -41,14 +41,27 @@ function jsonLeaves(text) {
 }
 
 // Where inside an MCP config the value sits: server name and "env.NAME" / "headers.X" / "args[2]".
-function locate(leaves, value) {
+function locate(leaves, value, hint = {}) {
   if (!leaves) return {};
-  const leaf = leaves.find((l) => l.value.includes(value));
-  if (!leaf) return {};
+  const matches = leaves.filter((l) => l.value.includes(value));
+  if (!matches.length) return {};
+  let leaf = matches[0];
+  if (hint.leaf && hint.leaf.value && hint.leaf.value.includes(value)) leaf = hint.leaf;
+  else if (hint.lines && hint.line != null) {
+    const onLine = matches.filter((l) => lineIndexForValue(hint.lines, l.value) === hint.line);
+    if (onLine.length) leaf = onLine[0];
+  }
   const p = leaf.path;
   let idx = -1;
   for (let i = p.length - 2; i >= 0; i--) if (SERVER_KEYS.has(p[i]) || (p[i] === 'mcp' && p[i + 1] === 'servers')) { idx = i; break; }
   if (idx >= 0 && p[idx] === 'mcp') idx++;
+  const permIdx = p.indexOf('permissions');
+  if (permIdx >= 0) {
+    const rest = p.slice(permIdx);
+    const key = rest.map((s, i) => (typeof s === 'number' ? `[${s}]` : (i ? '.' : '') + s)).join('');
+    const leafKey = typeof p[p.length - 1] === 'string' ? p[p.length - 1] : null;
+    return { server: idx >= 0 ? String(p[idx + 1]) : undefined, key, leafKey, section: 'permissions' };
+  }
   const rest = idx >= 0 ? p.slice(idx + 2) : p.slice(-2);
   const key = rest.map((s, i) => (typeof s === 'number' ? `[${s}]` : (i ? '.' : '') + s)).join('');
   const leafKey = typeof p[p.length - 1] === 'string' ? p[p.length - 1] : null;
@@ -88,6 +101,12 @@ function fixFor(f) {
   if (f.client === 'dotenv') {
     return `rotate this ${prov}key if this file was ever committed, synced or shared; keep it in .gitignore and out of agent context`;
   }
+  if (f.section === 'permissions' && /Claude Code/.test(f.client || '')) {
+    const bucket = typeof f.key === 'string' && /^permissions\.[A-Za-z0-9_]+/.test(f.key)
+      ? f.key.replace(/\[\d+\]$/, '')
+      : 'permissions.allow';
+    return `rotate this ${prov}key, then remove the entry from ${bucket}`;
+  }
   const name = envName(f);
   const ref = /Claude Code|portable/.test(f.client) ? `\${${name}}` : /Cursor|VS Code/.test(f.client) ? `\${env:${name}}` : `\${${name}}`;
   if (f.section === 'headers') return `rotate this ${prov}key, then set the header to "Bearer ${ref}" and export ${name} outside the file`;
@@ -100,6 +119,38 @@ function displayPath(p, cwd, home) {
   if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) return rel.split(path.sep).join('/');
   if (home && (abs === home || abs.startsWith(home + path.sep))) return '~/' + path.relative(home, abs).split(path.sep).join('/');
   return abs.split(path.sep).join('/');
+}
+
+function lineIndexForValue(lines, value) {
+  const escaped = JSON.stringify(value).slice(1, -1);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.includes(value) || line.includes(escaped)) return i;
+  }
+  return 0;
+}
+
+function findingScore(f) {
+  const located = f.key && /(?:\ballow\b|\bdeny\b|\bask\b|permissions\.|env\.|headers\.|args\[)/.test(String(f.key)) ? 2 : (f.section ? 1 : 0);
+  const specific = (f.rule === 'sensitive-key-name' || f.rule === 'generic-api-key') ? 0 : 1;
+  return (SEVERITY_ORDER[f.severity] || 0) * 10 + located + specific;
+}
+
+function sameSecret(a, b) {
+  if (a.file !== b.file || a.line !== b.line) return false;
+  return a.value === b.value || a.value.includes(b.value) || b.value.includes(a.value);
+}
+
+// Prefer the higher-severity, correctly-located finding when a raw line and
+// an unescaped leaf both hit the same secret (e.g. KEY vs KEY\).
+function mergeFindings(findings) {
+  const kept = [];
+  const ranked = findings.slice().sort((a, b) => findingScore(b) - findingScore(a));
+  for (const f of ranked) {
+    if (kept.some((k) => sameSecret(k, f))) continue;
+    kept.push(f);
+  }
+  return kept;
 }
 
 function scanFile(target, ctx) {
@@ -115,25 +166,32 @@ function scanFile(target, ctx) {
   const leaves = isJson ? jsonLeaves(text) : null;
   const lines = text.split(/\r?\n/);
   const findings = [];
-  const seen = new Set();
+  const addHit = (hit, lineIdx, fromLeaf) => {
+    const where = isJson ? locate(leaves, hit.value, { leaf: fromLeaf, line: lineIdx, lines }) : {};
+    if (!where.server && /\.toml$/i.test(target.path)) where.server = tomlServer(lines, lineIdx);
+    const f = {
+      kind: target.kind, client: target.client, file: display, line: lineIdx + 1, display: `${display}`,
+      server: where.server, key: where.key || hit.keyName, section: where.section, leafKey: where.leafKey,
+      keyName: hit.keyName, rule: hit.rule, provider: hit.provider, severity: hit.severity, value: hit.value,
+    };
+    f.fix = fixFor(f);
+    findings.push(f);
+  };
   lines.forEach((line, i) => {
     if (!line) return;
-    for (const hit of scanLine(line, display, target.kind)) {
-      const id = `${i}:${hit.value}`;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const where = isJson ? locate(leaves, hit.value) : {};
-      if (!where.server && /\.toml$/i.test(target.path)) where.server = tomlServer(lines, i);
-      const f = {
-        kind: target.kind, client: target.client, file: display, line: i + 1, display: `${display}`,
-        server: where.server, key: where.key || hit.keyName, section: where.section, leafKey: where.leafKey,
-        keyName: hit.keyName, rule: hit.rule, provider: hit.provider, severity: hit.severity, value: hit.value,
-      };
-      f.fix = fixFor(f);
-      findings.push(f);
-    }
+    for (const hit of scanLine(line, display, target.kind)) addHit(hit, i);
   });
-  return findings;
+  // Also scan unescaped JSON string leaves. A key inside a JSON-escaped
+  // header (\"x-api-key: KEY\") is otherwise only seen with a trailing
+  // backslash, which downgrades the hit and breaks locate().
+  if (leaves) {
+    for (const leaf of leaves) {
+      if (!leaf.value) continue;
+      const lineIdx = lineIndexForValue(lines, leaf.value);
+      for (const hit of scanLine(leaf.value, display, target.kind)) addHit(hit, lineIdx, leaf);
+    }
+  }
+  return mergeFindings(findings);
 }
 
 function buildTargets(opts) {

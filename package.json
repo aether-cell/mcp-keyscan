@@ -1,6 +1,6 @@
 {
   "name": "mcp-keyscan",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Find plaintext API keys in AI-agent / MCP configs, agent logs and shell history. Never prints a secret: redacted, shareable report. CLI and stdio MCP server. Local only, zero dependencies.",
   "bin": {
     "mcp-keyscan": "bin/mcp-keyscan.js"
@@ -18,7 +18,7 @@
     "NOTICE"
   ],
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/*.js"
   },
   "engines": {
     "node": ">=18"
