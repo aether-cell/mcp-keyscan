@@ -1,0 +1,142 @@
+name: Publish to MCP Registry
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+      contents: read
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.9
+      IMAGE_NAME: ghcr.io/aether-cell/mcp-keyscan
+      SERVER_NAME: io.github.aether-cell/mcp-keyscan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "lts/*"
+
+      - name: Run tests
+        run: npm test
+
+      - name: Resolve version
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+          fi
+          echo "VERSION=${VERSION}" >> "${GITHUB_ENV}"
+          jq --arg v "${VERSION}" --arg id "ghcr.io/aether-cell/mcp-keyscan:${VERSION}" \
+            '.version = $v | .packages[0].identifier = $id' \
+            server.json > server.tmp && mv server.tmp server.json
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push image
+        run: |
+          set -euo pipefail
+          docker build \
+            --label "io.modelcontextprotocol.server.name=${SERVER_NAME}" \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --label "org.opencontainers.image.licenses=Apache-2.0" \
+            -t "${IMAGE_NAME}:${VERSION}" \
+            .
+          docker push "${IMAGE_NAME}:${VERSION}"
+
+      - name: Make GHCR package public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Registry package validation uses an anonymous pull. GHCR packages
+          # scoped to a personal account default to private. Try the
+          # undocumented visibility endpoints first; if they fail, report the
+          # exact UI path and fail this job.
+          pkg="mcp-keyscan"
+          is_public() {
+            code="$(curl -sS -o /dev/null -w "%{http_code}" \
+              -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+              "https://ghcr.io/v2/aether-cell/${pkg}/manifests/${VERSION}")"
+            [[ "${code}" == "200" ]]
+          }
+
+          for i in 1 2 3 4 5 6; do
+            if is_public; then
+              echo "GHCR package is already anonymously pullable."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Package is not yet public; attempting GitHub API visibility change."
+          set +e
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/user/packages/container/${pkg}/visibility" \
+            -f visibility=public
+          api1=$?
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/user/packages/container/${pkg}" \
+            -f visibility=public
+          api2=$?
+          set -e
+
+          for i in 1 2 3 4 5 6; do
+            if is_public; then
+              echo "GHCR package is now anonymously pullable."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "::error::GHCR package ghcr.io/aether-cell/${pkg}:${VERSION} is still private. The official MCP Registry validates OCI images with an anonymous pull, so this package must be public."
+          echo "There is no supported GitHub REST API to change package visibility (Packages API is GET/DELETE/restore only). One-time UI step:"
+          echo "  1. Open https://github.com/users/aether-cell/packages/container/${pkg}/settings"
+          echo "  2. Danger Zone → Change visibility → Public"
+          echo "  3. Type '${pkg}' and confirm"
+          echo "  4. Re-run this workflow (Actions → Publish to MCP Registry → Run workflow)"
+          echo "API attempts exited with PATCH /visibility=${api1} PATCH /package=${api2}"
+          exit 1
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+          archive="mcp-publisher_${os}_${arch}.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "$archive.sigstore.json"
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish
