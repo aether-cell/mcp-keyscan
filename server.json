@@ -10,8 +10,9 @@
   },
   "packages": [
     {
-      "registryType": "oci",
-      "identifier": "ghcr.io/aether-cell/mcp-keyscan:1.1.1",
+      "registryType": "mcpb",
+      "identifier": "https://github.com/aether-cell/mcp-keyscan/releases/download/v1.1.1/mcp-keyscan.mcpb",
+      "fileSha256": "975858eb2be25d9edfcbe3d416f3cd4d08fd47685a6c869805e99de6aae6ada5",
       "transport": {
         "type": "stdio"
       }
