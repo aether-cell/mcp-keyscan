@@ -1,0 +1,36 @@
+{
+  "manifest_version": "0.3",
+  "name": "mcp-keyscan",
+  "display_name": "mcp-keyscan",
+  "version": "1.1.1",
+  "description": "Find plaintext API keys in AI-agent / MCP configs, agent logs and shell history.",
+  "author": {
+    "name": "aether-cell",
+    "url": "https://github.com/aether-cell"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aether-cell/mcp-keyscan"
+  },
+  "homepage": "https://github.com/aether-cell/mcp-keyscan",
+  "license": "Apache-2.0",
+  "server": {
+    "type": "node",
+    "entry_point": "bin/mcp-keyscan.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/bin/mcp-keyscan.js", "--mcp"]
+    }
+  },
+  "tools": [
+    {
+      "name": "scan_secrets",
+      "description": "Scan local configs, logs and shell history for plaintext API keys. Output is redacted."
+    }
+  ],
+  "compatibility": {
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

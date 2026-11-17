@@ -1,0 +1,7 @@
+test/
+.github/
+scripts/
+Dockerfile
+.dockerignore
+*.mcpb
+server.json

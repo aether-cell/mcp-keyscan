@@ -2,3 +2,5 @@ node_modules/
 *.log
 keyscan*.md
 .DS_Store
+
+*.mcpb
