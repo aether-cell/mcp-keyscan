@@ -48,13 +48,19 @@ jobs:
       - name: Build and push image
         run: |
           set -euo pipefail
-          docker build \
+          # Disable BuildKit attestations. ubuntu-latest's docker build
+          # otherwise wraps the image in a manifest list; GHCR then denies
+          # the final manifest push with a bare "denied" after the layers
+          # succeed.
+          docker buildx build \
+            --provenance=false \
+            --sbom=false \
+            --push \
             --label "io.modelcontextprotocol.server.name=${SERVER_NAME}" \
             --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
             --label "org.opencontainers.image.licenses=Apache-2.0" \
             -t "${IMAGE_NAME}:${VERSION}" \
             .
-          docker push "${IMAGE_NAME}:${VERSION}"
 
       - name: Make GHCR package public
         env:
