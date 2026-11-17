@@ -8,5 +8,8 @@ COPY package.json LICENSE NOTICE README.md AGENTS.md llms.txt ./
 COPY bin ./bin
 COPY src ./src
 COPY rules ./rules
+LABEL io.modelcontextprotocol.server.name="io.github.aether-cell/mcp-keyscan"
+LABEL org.opencontainers.image.source="https://github.com/aether-cell/mcp-keyscan"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 USER node
 ENTRYPOINT ["node", "bin/mcp-keyscan.js", "--mcp"]

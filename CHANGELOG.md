@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 - 2026-11-17
+
+### Changed
+- Packaging only: publish the stdio server to the official MCP Registry as an OCI image on GHCR (`ghcr.io/aether-cell/mcp-keyscan`), with a `server.json` and a GitHub Actions workflow that authenticates via GitHub OIDC. No scanner behavior changes.
+
 ## 1.1.0 - 2026-11-11
 
 ### Fixed
